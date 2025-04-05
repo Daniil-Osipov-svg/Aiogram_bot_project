@@ -1,1 +1,4 @@
-print('Hello pir')
+def hello():
+    print('Hello world')
+
+hello()
