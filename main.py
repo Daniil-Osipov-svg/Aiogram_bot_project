@@ -1,1 +1,2 @@
-a = i
+print('Hello')
+print('World')
