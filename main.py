@@ -13,7 +13,14 @@ dp = Dispatcher()
 # Пользователи
 users = {}
 
+# Проверка на наличие пользователя в списке
+def user_exists(message):
+    return message.from_user.id in users
+def user_not_exists(message):
+    return not user_exists(message)
+
 # Обработчик команды /start
+@dp.message(Command(commands=['start']))
 async def start_command(message: Message):
     # Проверяем, есть ли пользователь в списке
     # Если нет, добавляем его
@@ -45,23 +52,24 @@ async def start_command(message: Message):
         await message.answer('Привет снова!')
 
 # Обработчик команды /help
+@dp.message(Command(commands=['help']))
 async def help_command(message: Message):
     await message.answer('Я ваш помощник для подсчёта калорий.\n'
                         'Я могу помочь вам с подсчётом калорий и составлением рациона питания.\n'
                         'Напишите /start, чтобы начать!')
 
 # Эхо-бот
-async def echo_message(message: Message) -> None:
+@dp.message(Command(commands=['new_dish']), user_exists)
+async def start_new_dish(message: Message):
     try:
         await message.send_copy(chat_id=message.chat.id)
     except TypeError:
         await message.answer('Не могу отправить это сообщение.')
 
-# Регистрация обработчиков
-dp.message.register(start_command, Command(commands=['start']))
-dp.message.register(help_command, Command(commands=['help']))
-dp.message.register(echo_message)
-
+@dp.message(user_not_exists)
+async def say_no_user(message: Message):
+    await message.answer('Вы отсутствуете в нынешнем сеансе.\n'
+                        'Напишите /start, чтобы продолжить!')
 # Запуск бота
 if __name__ == '__main__':
     print('Бот запущен!')
