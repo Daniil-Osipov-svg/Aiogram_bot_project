@@ -28,4 +28,5 @@ async def echo_message(message: Message) -> None:
 
 # Запуск бота
 if __name__ == '__main__':
+    print('Бот запущен!')
     dp.run_polling(bot)
