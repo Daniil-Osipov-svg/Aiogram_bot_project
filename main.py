@@ -1,3 +1,7 @@
+# Импортируем файлы проекта
+from dicts import *
+
+# Импортируем библиотеки
 from aiogram import F #noqa
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED #noqa
@@ -9,9 +13,6 @@ BOT_TOKEN = '7774687817:AAGlmbpI-HhrXadQsgu5LyWqNKlsOcEAx9E'
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-
-# Пользователи
-users = {}
 
 # Проверка на наличие пользователя в списке
 def user_exists(message):
@@ -27,28 +28,8 @@ async def start_command(message: Message):
 
     # Убираем срабатывание ошибки mypy
     if message.from_user is not None:
-        users[message.from_user.id] = {
-            'username': message.from_user.username,
-            'first_name': message.from_user.first_name,
-            'last_name': message.from_user.last_name,
-            'weight': None,
-            'height': None,
-            'age': None,
-
-            'selects_name': False,
-            'selects_dish': False,
-            'selects_protein': False,
-            'selects_fats': False,
-            'selects_carbs': False,
-            'select_is_over': False,
-
-            'carbs': int,
-            'protein': int,
-            'fats': int,
-            'dish_name': None,
-
-            'custom_dishes': [],
-        }
+        # Инициализируем пользователя
+        initialize_user(message)
         await message.answer('Привет!\nМеня зовут TunWheel!')
         await message.answer('Я твой личный помощник по подсчёту калорий.\n'
                             'Я помогу тебе составить рацион питания и достичь твоих целей!')
