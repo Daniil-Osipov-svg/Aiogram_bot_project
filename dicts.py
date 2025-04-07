@@ -17,12 +17,19 @@ class UserData(TypedDict):
     weight: Optional[str]
     height: Optional[str]
     age: Optional[str]
+
     selects_name: bool
     selects_dish: bool
     selects_protein: bool
     selects_fats: bool
     selects_carbs: bool
     select_is_over: bool
+
+    selects_info: bool
+    selects_age: bool
+    selects_weight: bool
+    selects_height: bool
+
     carbs: Optional[str]
     protein: Optional[str]
     fats: Optional[str]
@@ -37,12 +44,19 @@ def initialize_user(message: Message) -> None:
         return
 
     users[message.from_user.id] = {
+        # Данные пользователя
         'username': message.from_user.username,
         'first_name': message.from_user.first_name,
         'last_name': message.from_user.last_name,
         'weight': None,
         'height': None,
         'age': None,
+
+        # Выбор пользователя
+        'selects_info': False,
+        'selects_age': False,
+        'selects_weight': False,
+        'selects_height': False,
 
         'selects_name': False,
         'selects_dish': False,
