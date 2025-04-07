@@ -26,10 +26,7 @@ async def start_command(message: Message):
     # Если нет, добавляем его
 
     # Убираем срабатывание ошибки mypy
-    if message.from_user is None:
-        await message.answer('Неверный пользователь!')
-        return
-    elif message.from_user.id not in users:
+    if message.from_user is not None:
         users[message.from_user.id] = {
             'username': message.from_user.username,
             'first_name': message.from_user.first_name,
@@ -38,9 +35,19 @@ async def start_command(message: Message):
             'height': None,
             'age': None,
 
+            'selects_name': False,
+            'selects_dish': False,
             'selects_protein': False,
             'selects_fats': False,
             'selects_carbs': False,
+            'select_is_over': False,
+
+            'carbs': int,
+            'protein': int,
+            'fats': int,
+            'dish_name': None,
+
+            'custom_dishes': [],
         }
         await message.answer('Привет!\nМеня зовут TunWheel!')
         await message.answer('Я твой личный помощник по подсчёту калорий.\n'
@@ -49,7 +56,8 @@ async def start_command(message: Message):
         print(f'Пользователь {message.from_user.username} добавлен в систему.')
         print(users[message.from_user.id])
     else:
-        await message.answer('Привет снова!')
+        await message.answer('Несуществующий пользователь!')
+        return
 
 # Обработчик команды /help
 @dp.message(Command(commands=['help']))
@@ -58,13 +66,77 @@ async def help_command(message: Message):
                         'Я могу помочь вам с подсчётом калорий и составлением рациона питания.\n'
                         'Напишите /start, чтобы начать!')
 
-# Эхо-бот
+# Обработчик команды /new_dish
 @dp.message(Command(commands=['new_dish']), user_exists)
 async def start_new_dish(message: Message):
-    try:
-        await message.send_copy(chat_id=message.chat.id)
-    except TypeError:
-        await message.answer('Не могу отправить это сообщение.')
+    await message.answer('Отправьте количество углеводов в вашем блюде.')
+    if message.from_user is not None:
+        users[message.from_user.id]['selects_dish'] = True
+        users[message.from_user.id]['selects_carbs'] = True
+        users[message.from_user.id]['selects_protein'] = False
+        users[message.from_user.id]['selects_fats'] = False
+        users[message.from_user.id]['selects_name'] = False
+
+# Составление нового блюда
+@dp.message(F.text, user_exists)
+async def desc_new_dish(message: Message):
+    if message.from_user is not None:
+        # Проверяем, есть ли пользователь в списке
+        if users[message.from_user.id]['selects_dish']:
+            # Если да, то проверяем, что он ввёл число
+            if message.text is not None and message.text.isdigit():
+                users[message.from_user.id]['carbs'] = message.text
+                users[message.from_user.id]['selects_dish'] = False
+                users[message.from_user.id]['selects_protein'] = True
+                await message.answer('Отправьте количество белков в вашем блюде.')
+            else:
+                await message.answer('Введите число!')
+                print(type(message.text))
+        elif users[message.from_user.id]['selects_protein']:
+            if message.text is not None and message.text.isdigit():
+                users[message.from_user.id]['protein'] = message.text
+                users[message.from_user.id]['selects_protein'] = False
+                users[message.from_user.id]['selects_fats'] = True
+                await message.answer('Отправьте количество жиров в вашем блюде.')
+            else:
+                await message.answer('Введите число!')
+        elif users[message.from_user.id]['selects_fats']:
+            if message.text is not None and message.text.isdigit():
+                users[message.from_user.id]['fats'] = message.text
+                users[message.from_user.id]['selects_fats'] = False
+                users[message.from_user.id]['selects_name'] = True
+                await message.answer('Отправьте название вашего блюда.')
+            else:
+                await message.answer('Введите число!')
+        elif users[message.from_user.id]['selects_name']:
+            users[message.from_user.id]['dish_name'] = message.text
+            await message.answer(f'Ваше блюдо: {users[message.from_user.id]['dish_name']}.\n'
+                                f'Углеводов: {users[message.from_user.id]['carbs']}.\n'
+                                f'Белков: {users[message.from_user.id]['protein']}.\n'
+                                f'Жиров: {users[message.from_user.id]['fats']}.\n\n'
+                                "Отправьте любое сообщение, чтобы сохранить блюдо.\n"
+                                )
+            # Сбрасываем все значения
+            users[message.from_user.id]['selects_name'] = False
+            users[message.from_user.id]['selects_dish'] = False
+            users[message.from_user.id]['selects_protein'] = False
+            users[message.from_user.id]['selects_fats'] = False
+            users[message.from_user.id]['select_is_over'] = True
+        elif users[message.from_user.id]['select_is_over']:
+            # Если пользователь ввёл любое сообщение, то мы сохраняем его в список
+            users[message.from_user.id]['custom_dishes'].append({
+                'name': users[message.from_user.id]['dish_name'],
+                'carbs': users[message.from_user.id]['carbs'],
+                'protein': users[message.from_user.id]['protein'],
+                'fats': users[message.from_user.id]['fats'],
+            })
+            users[message.from_user.id]['select_is_over'] = False
+            print(users[message.from_user.id])
+            await message.answer('Вы завершили создание блюда.\n'
+                                'Напишите /new_dish, чтобы создать новое блюдо.')
+    else:
+        await message.answer('Несуществующее выражение!')
+        return
 
 @dp.message(user_not_exists)
 async def say_no_user(message: Message):
