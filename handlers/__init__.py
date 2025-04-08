@@ -1,7 +1,7 @@
-from .user_handlers import register_user_handlers
-from .dish_handlers import register_dish_handlers
+from .user_handlers import router as user_router
+from .dish_handlers import router as dish_router
 
-def register_all_handlers(dp):
-    """Регистрирует все обработчики сообщений"""
-    register_user_handlers(dp)
-    register_dish_handlers(dp)
+__all__ = [
+    'user_router',
+    'dish_router',
+]
