@@ -1,17 +1,19 @@
 # Импортируем файлы проекта
 from dicts import *
+from config import *
 
 # Импортируем библиотеки
-from aiogram import F #noqa
+import os
+import dotenv
+from aiogram import F
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED #noqa
 from aiogram.types import Message, ChatMemberUpdated #noqa
 
-# API моего чат бота
-BOT_TOKEN = '7774687817:AAGlmbpI-HhrXadQsgu5LyWqNKlsOcEAx9E'
+# Получаем токен из конфигурационного файла
+config = load_config()
 
-
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=config.bot.token)
 dp = Dispatcher()
 
 # Проверка на наличие пользователя в списке
