@@ -12,8 +12,10 @@ def selects_dish(message):
 def user_exists(message):
     return message.from_user is not None and message.from_user.id in users
 
+# Проверка на существование пользователя в сессии
+router.message.filter(user_exists)
 
-@router.message(Command(commands=['new_dish']), user_exists)
+@router.message(Command(commands=['new_dish']))
 async def start_new_dish(message: Message):
     await message.answer('Отправьте количество углеводов в вашем блюде.')
     if message.from_user is not None:
