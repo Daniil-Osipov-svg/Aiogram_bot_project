@@ -3,11 +3,11 @@ import logging
 # Импортируем файлы проекта
 from dicts import *
 from config import *
-from handlers import user_handlers, dish_handlers
+from handlers import user_handlers, dish_handlers, callback_handlers
 
 # Импортируем библиотеки
-from aiogram import F #noqa
 from aiogram import Bot, Dispatcher
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Message
 from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED #noqa
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ async def main() -> None:
     # Регистрация всех обработчиков
     dp.include_router(user_handlers.router)
     dp.include_router(dish_handlers.router)
+    dp.include_router(callback_handlers.router)
 
     # Запуск бота
     if __name__ == '__main__':

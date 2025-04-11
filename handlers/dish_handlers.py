@@ -1,20 +1,17 @@
 from aiogram import F, Router
-from aiogram.filters import Command
 from aiogram.types import Message
 from dicts import users
+from filters.filters import user_exists, selects_dish
+from keyboards.main_menu import yes_or_no_dish
+import logging
 
 # Импортируем роутер
 router = Router()
 
-def selects_dish(message):
-    return message.from_user is not None and message.from_user.id in users and users[message.from_user.id]['selects_dish']
-
-def user_exists(message):
-    return message.from_user is not None and message.from_user.id in users
-
 # Проверка на существование пользователя в сессии
 router.message.filter(user_exists)
 
+'''
 @router.message(Command(commands=['new_dish']))
 async def start_new_dish(message: Message):
     await message.answer('Отправьте количество углеводов в вашем блюде.')
@@ -30,6 +27,8 @@ async def start_new_dish(message: Message):
         users[message.from_user.id]['selects_age'] = False
         users[message.from_user.id]['selects_weight'] = False
         users[message.from_user.id]['selects_height'] = False
+'''
+
 
 @router.message(F.text, selects_dish)
 async def desc_new_dish(message: Message):
@@ -41,6 +40,8 @@ async def desc_new_dish(message: Message):
                 users[message.from_user.id]['carbs'] = message.text
                 users[message.from_user.id]['selects_carbs'] = False
                 users[message.from_user.id]['selects_protein'] = True
+                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+                await message.delete()
                 await message.answer('Отправьте количество белков в вашем блюде.')
             else:
                 await message.answer('Введите число!')
@@ -50,6 +51,8 @@ async def desc_new_dish(message: Message):
                 users[message.from_user.id]['protein'] = message.text
                 users[message.from_user.id]['selects_protein'] = False
                 users[message.from_user.id]['selects_fats'] = True
+                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+                await message.delete()
                 await message.answer('Отправьте количество жиров в вашем блюде.')
             else:
                 await message.answer('Введите число!')
@@ -58,16 +61,21 @@ async def desc_new_dish(message: Message):
                 users[message.from_user.id]['fats'] = message.text
                 users[message.from_user.id]['selects_fats'] = False
                 users[message.from_user.id]['selects_name'] = True
+                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+                await message.delete()
                 await message.answer('Отправьте название вашего блюда.')
             else:
                 await message.answer('Введите число!')
         elif users[message.from_user.id]['selects_name']:
             users[message.from_user.id]['dish_name'] = message.text
-            await message.answer(f'Ваше блюдо: {users[message.from_user.id]['dish_name']}.\n'
+            await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+            await message.delete()
+            await message.answer (text = f'Ваше блюдо: {users[message.from_user.id]['dish_name']}.\n'
                                 f'Углеводов: {users[message.from_user.id]['carbs']}.\n'
                                 f'Белков: {users[message.from_user.id]['protein']}.\n'
                                 f'Жиров: {users[message.from_user.id]['fats']}.\n\n'
-                                "Отправьте любое сообщение, чтобы сохранить блюдо.\n"
+                                "Нажмите кнопку Подтвердить, чтобы продолжить\nИли Отмена, чтобы начать заново.",
+                                reply_markup = yes_or_no_dish()
                                 )
             # Сбрасываем все значения
             users[message.from_user.id]['selects_name'] = False
@@ -75,19 +83,6 @@ async def desc_new_dish(message: Message):
             users[message.from_user.id]['selects_protein'] = False
             users[message.from_user.id]['selects_fats'] = False
             users[message.from_user.id]['select_is_over'] = True
-        elif users[message.from_user.id]['select_is_over']:
-            # Если пользователь ввёл любое сообщение, то мы сохраняем его в список
-            users[message.from_user.id]['custom_dishes'].append({
-                'name': users[message.from_user.id]['dish_name'],
-                'carbs': users[message.from_user.id]['carbs'],
-                'protein': users[message.from_user.id]['protein'],
-                'fats': users[message.from_user.id]['fats'],
-            })
-            users[message.from_user.id]['select_is_over'] = False
-            users[message.from_user.id]['selects_dish'] = False
-            print(users[message.from_user.id])
-            await message.answer('Вы завершили создание блюда.\n'
-                                'Напишите /new_dish, чтобы создать новое блюдо.')
     else:
         await message.answer('Несуществующее выражение!')
         return
