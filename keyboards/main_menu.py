@@ -3,6 +3,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from keyboards.create_keyboard import create_keyboard
 
+
 def start_menu() -> InlineKeyboardMarkup:
 
     reply_markup = create_keyboard(
@@ -14,6 +15,7 @@ def start_menu() -> InlineKeyboardMarkup:
 
     return reply_markup
 
+
 def yes_or_no_user() -> InlineKeyboardMarkup:
 
     reply_markup = create_keyboard(
@@ -24,6 +26,7 @@ def yes_or_no_user() -> InlineKeyboardMarkup:
 
     return reply_markup
 
+
 def yes_or_no_dish() -> InlineKeyboardMarkup:
 
     reply_markup = create_keyboard(
@@ -33,6 +36,40 @@ def yes_or_no_dish() -> InlineKeyboardMarkup:
     )
 
     return reply_markup
+
+
+def gender_select() -> InlineKeyboardMarkup:
+
+    reply_markup = create_keyboard(
+        2,
+        "♂ Мужской ♂",
+        "♀ Женский ♀",
+    )
+
+    return reply_markup
+
+
+def activity_select() -> InlineKeyboardMarkup:
+
+    reply_markup = create_keyboard(
+        1,
+        "⚡⚡⚡ Высокая активность ⚡⚡⚡",
+        "⚡⚡ Средняя активность ⚡⚡",
+        "⚡ Низкая активность ⚡",
+    )
+
+    return reply_markup
+
+
+
+
+
+
+
+
+
+
+
 
 # ЭТО ДЛЯ ТЕСТА
 all_user_dishes = {

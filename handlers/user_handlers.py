@@ -1,10 +1,14 @@
 from aiogram import F, Router
-from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.filters import Command, StateFilter
+from aiogram.types import Message, CallbackQuery
 from dicts import users, initialize_user
-from keyboards.main_menu import start_menu, yes_or_no_user
+from keyboards.main_menu import start_menu, yes_or_no_user, gender_select, activity_select
 from filters.filters import user_exists, user_not_exists, selects_info
 import logging
+
+from .callback_handlers import FSMFillUser
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup, default_state
 
 router = Router()
 
@@ -37,63 +41,96 @@ async def help_command(message: Message):
                         'Напишите /start, чтобы начать!')
 
 
-'''
-@router.message(Command(commands=['reuser']), user_exists)
-async def reuser_command(message: Message):
-    await message.answer('Вы решили указать информацию о себе\nДля начала введите свой возраст.')
-    if message.from_user is not None:
-        users[message.from_user.id]['selects_dish'] = False
-        users[message.from_user.id]['selects_info'] = True
-        users[message.from_user.id]['selects_age'] = True
-        users[message.from_user.id]['selects_weight'] = False
-        users[message.from_user.id]['selects_height'] = False
-'''
+@router.message(F.text, StateFilter(FSMFillUser.user_age))
+async def desc_user_age(message: Message, state: FSMContext):
+    if message.text is not None and message.text.isdigit():
 
-@router.message(F.text, selects_info)
-async def desc_user_info(message: Message):
-    if message.from_user is not None:
-        # Проверяем, есть ли пользователь в списке
-        if users[message.from_user.id]['selects_age']:
-            # Если да, то проверяем, что он ввёл число
-            if message.text is not None and message.text.isdigit():
-                users[message.from_user.id]['age'] = message.text
-                users[message.from_user.id]['selects_age'] = False
-                users[message.from_user.id]['selects_weight'] = True
-                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
-                await message.delete()
-                await message.answer('Отправьте свой вес.')
-            else:
-                await message.answer('Введите число!')
-        elif users[message.from_user.id]['selects_weight']:
-            if message.text is not None and message.text.isdigit():
-                users[message.from_user.id]['weight'] = message.text
-                users[message.from_user.id]['selects_weight'] = False
-                users[message.from_user.id]['selects_height'] = True
-                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
-                await message.delete()
-                await message.answer('Отправьте свой рост.')
-            else:
-                await message.answer('Введите число!')
-        elif users[message.from_user.id]['selects_height']:
-            if message.text is not None and message.text.isdigit():
-                users[message.from_user.id]['height'] = message.text
-                users[message.from_user.id]['selects_height'] = False
-                users[message.from_user.id]['selects_info'] = False
+        await state.update_data(age = message.text)
 
-                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
-                await message.delete()
+        await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+        await message.delete()
+        await message.answer('Отправьте свой вес.')
 
-                await message.answer(f'Ваш возраст: {users[message.from_user.id]["age"]}.\n'
-                                    f'Ваш вес: {users[message.from_user.id]["weight"]}.\n'
-                                    f'Ваш рост: {users[message.from_user.id]["height"]}.\n\n'
+        await state.set_state(FSMFillUser.user_weight)
+
+    else:
+        await message.answer('Введите число!')
+
+@router.message(F.text, StateFilter(FSMFillUser.user_weight))
+async def desc_user_weight(message: Message, state: FSMContext):
+    if message.text is not None and message.text.isdigit():
+
+        await state.update_data(weight = message.text)
+
+        await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+        await message.delete()
+        await message.answer('Отправьте свой рост.')
+
+        await state.set_state(FSMFillUser.user_height)
+
+    else:
+        await message.answer('Введите число!')
+
+@router.message(F.text, StateFilter(FSMFillUser.user_height))
+async def desc_user_height(message: Message, state: FSMContext):
+    if message.text is not None and message.text.isdigit():
+
+        await state.update_data(height = message.text)
+
+        await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+        await message.delete()
+        await message.answer(text = 'Выберите ваш пол.', reply_markup = gender_select())
+
+        await state.set_state(FSMFillUser.user_gender)
+
+    else:
+        await message.answer('Введите число!')
+
+@router.callback_query(StateFilter(FSMFillUser.user_gender))
+async def desc_user_gender(callback: CallbackQuery, state: FSMContext):
+    if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
+
+        await state.update_data(gender = callback.data)
+
+        await callback.message.edit_text(text = 'Выберите вашу среднюю физическую активность.', reply_markup = activity_select())
+
+        await state.set_state(FSMFillUser.user_activity)
+
+    else:
+        await callback.answer()
+
+@router.callback_query(StateFilter(FSMFillUser.user_activity))
+async def desc_user_activity(callback: CallbackQuery, state: FSMContext):
+    if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
+
+        await state.update_data(activity = callback.data)
+        data = await state.get_data()
+
+        new_user_age = data.get('age', "Не указано")
+        new_user_weight = data.get('weight', "Не указано")
+        new_user_height = data.get('height', "Не указано")
+        new_user_gender = data.get('gender', "Не указано")
+        new_user_activity = data.get('activity', "Не указано")
+
+        if new_user_activity == '⚡⚡⚡ Высокая активность ⚡⚡⚡':
+            new_user_activity = '🔴Высокий🔴'
+        elif new_user_activity == '⚡⚡ Средняя активность ⚡⚡':
+            new_user_activity = '🟡Средний🟡'
+        elif new_user_activity == '⚡ Низкая активность ⚡':
+            new_user_activity = '🟢Низкий🟢'
+
+
+        await callback.message.edit_text(f'Ваш возраст: {new_user_age}.\n'
+                                    f'Ваш вес: {new_user_weight}.\n'
+                                    f'Ваш рост: {new_user_height}.\n'
+                                    f'Ваш пол: {new_user_gender}.\n'
+                                    f'Ваш уровень активности: {new_user_activity}.\n'
                                     'Вы можете начать составлять рацион питания!\n\n'
                 "Нажмите кнопку Подтвердить, чтобы продолжить\nИли Отмена, если хочешь подкоректировать данные о себе.",
                     reply_markup=yes_or_no_user())
-            else:
-                await message.answer('Введите число!')
-    else:
-        await message.answer('Несуществующее выражение!')
-        return
+
+
+        await state.set_state(FSMFillUser.end)
 
 @router.message(user_not_exists)
 async def say_no_user(message: Message):

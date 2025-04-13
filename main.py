@@ -10,6 +10,14 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Message
 from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED #noqa
 
+# Редис
+from aiogram.fsm.storage.redis import RedisStorage
+from redis.asyncio import Redis
+
+redis = Redis(host='localhost')
+storage = RedisStorage(redis=redis)
+
+
 logger = logging.getLogger(__name__)
 
 async def main() -> None:
@@ -23,7 +31,7 @@ async def main() -> None:
     config: Config = load_config()
 
     bot = Bot(token=config.bot.token)
-    dp = Dispatcher()
+    dp = Dispatcher(storage=storage)
 
     # Регистрация всех обработчиков
     dp.include_router(user_handlers.router)

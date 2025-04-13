@@ -1,9 +1,13 @@
 from aiogram import F, Router
+from aiogram.filters import StateFilter
 from aiogram.types import Message
 from dicts import users
-from filters.filters import user_exists, selects_dish
 from keyboards.main_menu import yes_or_no_dish
-import logging
+from filters.filters import user_exists, selects_dish
+
+from .callback_handlers import FSMFillDish
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup, default_state
 
 # Импортируем роутер
 router = Router()
@@ -11,78 +15,76 @@ router = Router()
 # Проверка на существование пользователя в сессии
 router.message.filter(user_exists)
 
-'''
-@router.message(Command(commands=['new_dish']))
-async def start_new_dish(message: Message):
-    await message.answer('Отправьте количество углеводов в вашем блюде.')
-    if message.from_user is not None:
-        users[message.from_user.id]['selects_dish'] = True
-        users[message.from_user.id]['selects_carbs'] = True
-        users[message.from_user.id]['selects_protein'] = False
-        users[message.from_user.id]['selects_fats'] = False
-        users[message.from_user.id]['selects_name'] = False
 
-        # Сбрасываем все значения
-        users[message.from_user.id]['selects_info'] = False
-        users[message.from_user.id]['selects_age'] = False
-        users[message.from_user.id]['selects_weight'] = False
-        users[message.from_user.id]['selects_height'] = False
-'''
+@router.message(F.text, StateFilter(FSMFillDish.dish_carbs))
+async def desc_new_dish_carbs(message: Message, state: FSMContext):
+    if message.text is not None and message.text.isdigit():
 
+        await state.update_data(carbs = message.text)
 
-@router.message(F.text, selects_dish)
-async def desc_new_dish(message: Message):
-    if message.from_user is not None:
-        # Проверяем, есть ли пользователь в списке
-        if users[message.from_user.id]['selects_carbs']:
-            # Если да, то проверяем, что он ввёл число
-            if message.text is not None and message.text.isdigit():
-                users[message.from_user.id]['carbs'] = message.text
-                users[message.from_user.id]['selects_carbs'] = False
-                users[message.from_user.id]['selects_protein'] = True
-                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
-                await message.delete()
-                await message.answer('Отправьте количество белков в вашем блюде.')
-            else:
-                await message.answer('Введите число!')
-                print(type(message.text))
-        elif users[message.from_user.id]['selects_protein']:
-            if message.text is not None and message.text.isdigit():
-                users[message.from_user.id]['protein'] = message.text
-                users[message.from_user.id]['selects_protein'] = False
-                users[message.from_user.id]['selects_fats'] = True
-                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
-                await message.delete()
-                await message.answer('Отправьте количество жиров в вашем блюде.')
-            else:
-                await message.answer('Введите число!')
-        elif users[message.from_user.id]['selects_fats']:
-            if message.text is not None and message.text.isdigit():
-                users[message.from_user.id]['fats'] = message.text
-                users[message.from_user.id]['selects_fats'] = False
-                users[message.from_user.id]['selects_name'] = True
-                await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
-                await message.delete()
-                await message.answer('Отправьте название вашего блюда.')
-            else:
-                await message.answer('Введите число!')
-        elif users[message.from_user.id]['selects_name']:
-            users[message.from_user.id]['dish_name'] = message.text
-            await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
-            await message.delete()
-            await message.answer (text = f'Ваше блюдо: {users[message.from_user.id]['dish_name']}.\n'
-                                f'Углеводов: {users[message.from_user.id]['carbs']}.\n'
-                                f'Белков: {users[message.from_user.id]['protein']}.\n'
-                                f'Жиров: {users[message.from_user.id]['fats']}.\n\n'
+        await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+        await message.delete()
+        await message.answer('Отправьте количество белков в вашем блюде.')
+
+        await state.set_state(FSMFillDish.dish_protein)
+    else:
+        await message.delete()
+        await message.answer('Введите число!')
+
+@router.message(F.text, StateFilter(FSMFillDish.dish_protein))
+async def desc_new_dish_protein(message: Message, state: FSMContext):
+    if message.text is not None and message.text.isdigit():
+
+        await state.update_data(protein = message.text)
+
+        await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+        await message.delete()
+        await message.answer('Отправьте количество жиров в вашем блюде.')
+
+        await state.set_state(FSMFillDish.dish_fats)
+    else:
+        await message.delete()
+        await message.answer('Введите число!')
+
+@router.message(F.text, StateFilter(FSMFillDish.dish_fats))
+async def desc_new_dish_fats(message: Message, state: FSMContext):
+    if message.text is not None and message.text.isdigit():
+
+        await state.update_data(fats = message.text)
+
+        await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+        await message.delete()
+        await message.answer('Отправьте название вашего блюда.')
+
+        await state.set_state(FSMFillDish.dish_name)
+    else:
+        await message.delete()
+        await message.answer('Введите число!')
+
+@router.message(F.text, StateFilter(FSMFillDish.dish_name))
+async def desc_new_dish_name(message: Message, state: FSMContext):
+    if message.text is not None:
+
+        await state.update_data(dish_name = message.text)
+        data = await state.get_data()
+
+        new_dish_name = data.get('dish_name', "Не указано")
+        new_dish_carbs = data.get('carbs', "Не указано")
+        new_dish_protein = data.get('protein', "Не указано")
+        new_dish_fats = data.get('fats', "Не указано")
+
+        await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
+        await message.delete()
+        await message.answer (text = f'Ваше блюдо: {new_dish_name}.\n'
+                                  f'Углеводов: {new_dish_carbs}.\n'
+                                  f'Белков: {new_dish_protein}.\n'
+                                  f'Жиров: {new_dish_fats}.\n\n'
                                 "Нажмите кнопку Подтвердить, чтобы продолжить\nИли Отмена, чтобы начать заново.",
                                 reply_markup = yes_or_no_dish()
-                                )
-            # Сбрасываем все значения
-            users[message.from_user.id]['selects_name'] = False
-            users[message.from_user.id]['selects_carbs'] = False
-            users[message.from_user.id]['selects_protein'] = False
-            users[message.from_user.id]['selects_fats'] = False
-            users[message.from_user.id]['select_is_over'] = True
+                            )
+
+        await state.set_state(FSMFillDish.end)
+
     else:
         await message.answer('Несуществующее выражение!')
         return

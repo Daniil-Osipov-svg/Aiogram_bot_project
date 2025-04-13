@@ -2,41 +2,33 @@
 # и их методов
 from aiogram.types import Message
 
-from typing import Dict, List, Tuple, Union, Optional, TypedDict
+from typing import Dict, List, Optional, TypedDict, TypeAlias, Any
 
-class DishData(TypedDict):
-    name: Optional[str]
-    carbs: Optional[str]
-    protein: Optional[str]
-    fats: Optional[str]
+UserID: TypeAlias = int
+# Переменные блюда
+class DishData(TypedDict, total = False):
+    name: str
+    carbs: str
+    protein: str
+    fats: str
+
+# Переменные пользователя
+class UserInfoData(TypedDict, total = False):
+    age: str
+    weight: str
+    height: str
+    gender: str
+    activity: str
 
 class UserData(TypedDict):
     username: Optional[str]
     first_name: Optional[str]
     last_name: Optional[str]
-    weight: Optional[str]
-    height: Optional[str]
-    age: Optional[str]
 
-    selects_name: bool
-    selects_dish: bool
-    selects_protein: bool
-    selects_fats: bool
-    selects_carbs: bool
-    select_is_over: bool
-
-    selects_info: bool
-    selects_age: bool
-    selects_weight: bool
-    selects_height: bool
-
-    carbs: Optional[str]
-    protein: Optional[str]
-    fats: Optional[str]
-    dish_name: Optional[str]
+    user_info: UserInfoData
     custom_dishes: List[DishData]
 
-users: Dict[int, UserData] = {}
+users: Dict[UserID, UserData] = {}
 
 def initialize_user(message: Message) -> None:
     #Инициализирует нового пользователя в системе
@@ -48,27 +40,7 @@ def initialize_user(message: Message) -> None:
         'username': message.from_user.username,
         'first_name': message.from_user.first_name,
         'last_name': message.from_user.last_name,
-        'weight': None,
-        'height': None,
-        'age': None,
 
-        # Выбор пользователя
-        'selects_info': False,
-        'selects_age': False,
-        'selects_weight': False,
-        'selects_height': False,
-
-        'selects_name': False,
-        'selects_dish': False,
-        'selects_protein': False,
-        'selects_fats': False,
-        'selects_carbs': False,
-        'select_is_over': False,
-
-        'carbs': None,
-        'protein': None,
-        'fats': None,
-        'dish_name': None,
-
+        'user_info': {},
         'custom_dishes': [],
     }
