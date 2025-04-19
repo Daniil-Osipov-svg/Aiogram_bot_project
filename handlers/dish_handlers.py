@@ -23,7 +23,7 @@ async def desc_new_dish_carbs(message: Message, state: FSMContext):
 
         await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
         await message.delete()
-        await message.answer('Отправьте количество белков в вашем блюде.')
+        await message.answer('Отправьте количество белков (грамм) в вашем блюде.')
 
         await state.set_state(FSMFillDish.dish_protein)
     else:
@@ -38,7 +38,7 @@ async def desc_new_dish_protein(message: Message, state: FSMContext):
 
         await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
         await message.delete()
-        await message.answer('Отправьте количество жиров в вашем блюде.')
+        await message.answer('Отправьте количество жиров (грамм) в вашем блюде.')
 
         await state.set_state(FSMFillDish.dish_fats)
     else:
@@ -64,10 +64,10 @@ async def desc_new_dish_fats(message: Message, state: FSMContext):
 async def desc_new_dish_name(message: Message, state: FSMContext):
     if message.text is not None:
 
-        await state.update_data(dish_name = message.text)
+        await state.update_data(name = message.text)
         data = await state.get_data()
 
-        new_dish_name = data.get('dish_name', "Не указано")
+        new_dish_name = data.get('name', "Не указано")
         new_dish_carbs = data.get('carbs', "Не указано")
         new_dish_protein = data.get('protein', "Не указано")
         new_dish_fats = data.get('fats', "Не указано")

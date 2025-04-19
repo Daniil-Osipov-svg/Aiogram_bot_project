@@ -20,6 +20,8 @@ class UserInfoData(TypedDict, total = False):
     gender: str
     activity: str
 
+    tdee: str
+
 class UserData(TypedDict):
     username: Optional[str]
     first_name: Optional[str]

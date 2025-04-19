@@ -1,4 +1,6 @@
+from typing import List
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from dicts import DishData
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from keyboards.create_keyboard import create_keyboard
@@ -10,7 +12,8 @@ def start_menu() -> InlineKeyboardMarkup:
         2,
         "🥗Добавить блюда", "🥙Мои блюда",
         "👀Настроить профиль", "👴Помощь",
-        "Моя суточная норма", "Настройки",
+        "Моя суточная норма", "Рацион на день",
+        "Настройки",
     )
 
     return reply_markup
@@ -69,6 +72,38 @@ def return_select() -> InlineKeyboardMarkup:
 
     return reply_markup
 
+ITEMS_PER_PAGE = 5  # Количество элементов на странице
+
+def make_menu(dishes: List[DishData], page: int, selected: List[DishData]) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    start = page * ITEMS_PER_PAGE
+    end = start + ITEMS_PER_PAGE
+
+    # Кнопки блюд
+    for idx, dish in enumerate(dishes[start:end], start=start):
+        checked = "✅" if dish in selected else ""
+        text = f"{checked} {dish['name']}"
+        callback = f"toggle:{idx}:{page}"
+        kb.button(text=text, callback_data=callback)
+
+    kb.adjust(2)
+
+    # Кнопки навигации
+
+    nav_buttons = []
+
+    if page > 0:
+        nav_buttons.append(InlineKeyboardButton(text="<", callback_data=f"page:{page-1}"))
+
+    if end < len(dishes):
+        nav_buttons.append(InlineKeyboardButton(text=">", callback_data=f"page:{page+1}"))
+
+    if nav_buttons:
+        kb.row(*nav_buttons)
+
+    kb.row(InlineKeyboardButton(text="Подтвердить ✅", callback_data="confirm"))
+
+    return kb.as_markup()
 
 
 

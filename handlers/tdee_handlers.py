@@ -28,6 +28,10 @@ async def cmd_tdee(callback: CallbackQuery):
 
     tdee = calculate_tdee(users[uid]['user_info'])
 
+    # Сохраняем TDEE в бд пользователей
+
+    users[uid]['user_info']["tdee"] = f"{tdee:.2f}"
+
     text = (
         f"Ваш суточный расход калорий (TDEE): {tdee:.2f} ккал.\n"
         "Это количество калорий, которое вам нужно для поддержания текущего веса."
