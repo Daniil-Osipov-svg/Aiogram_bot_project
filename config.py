@@ -4,7 +4,7 @@ from dataclasses import dataclass
 # Датабаза
 @dataclass
 class DatabaseConfig:
-    db_name: str
+    db_url: str
     db_host: str
     db_user: str
     db_password: str
@@ -29,7 +29,7 @@ def load_config(path: str | None = None) -> Config:
 
     return Config(
         database=DatabaseConfig(
-            db_name=env('DB_NAME'),
+            db_url=env('DB_URL'),
             db_host=env('DB_HOST'),
             db_user=env('DB_USER'),
             db_password=env('DB_PASSWORD')

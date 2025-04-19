@@ -10,7 +10,7 @@ def start_menu() -> InlineKeyboardMarkup:
         2,
         "🥗Добавить блюда", "🥙Мои блюда",
         "👀Настроить профиль", "👴Помощь",
-        "Настройки",
+        "Моя суточная норма", "Настройки",
     )
 
     return reply_markup
@@ -60,6 +60,14 @@ def activity_select() -> InlineKeyboardMarkup:
 
     return reply_markup
 
+def return_select() -> InlineKeyboardMarkup:
+
+    reply_markup = create_keyboard(
+        1,
+        "🔙Вернуться в меню",
+    )
+
+    return reply_markup
 
 
 

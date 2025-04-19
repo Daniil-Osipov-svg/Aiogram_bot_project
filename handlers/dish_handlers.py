@@ -1,7 +1,6 @@
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.types import Message
-from dicts import users
 from keyboards.main_menu import yes_or_no_dish
 from filters.filters import user_exists, selects_dish
 

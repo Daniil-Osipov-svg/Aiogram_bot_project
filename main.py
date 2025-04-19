@@ -3,7 +3,10 @@ import logging
 # Импортируем файлы проекта
 from dicts import *
 from config import *
-from handlers import user_handlers, dish_handlers, callback_handlers
+from handlers import user_handlers, dish_handlers, callback_handlers, tdee_handlers
+
+# База данных
+#from database.engine import create_db, drop_db
 
 # Импортируем библиотеки
 from aiogram import Bot, Dispatcher
@@ -20,7 +23,21 @@ storage = RedisStorage(redis=redis)
 
 logger = logging.getLogger(__name__)
 
-async def main() -> None:
+async def on_startup(bot):
+    # Создаем базу данных, если она не существует
+    #await create_db()
+    logger.info("База данных создана")
+
+async def on_shutdown(bot):
+    # Закрываем соединение с базой данных
+    logger.info("Бот завершает работу")
+
+async def main():
+
+    # Привязываем функции к событиям
+    #dp.register_startup(on_startup)
+    #dp.register_shutdown(on_shutdown)
+
     # Настройка логирования
     logging.basicConfig(
         level=logging.INFO,
@@ -37,6 +54,7 @@ async def main() -> None:
     dp.include_router(user_handlers.router)
     dp.include_router(dish_handlers.router)
     dp.include_router(callback_handlers.router)
+    dp.include_router(tdee_handlers.router)
 
     # Запуск бота
     if __name__ == '__main__':
