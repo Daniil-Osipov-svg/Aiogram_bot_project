@@ -19,7 +19,7 @@ def calculate_tdee(user_info) -> float:
     factors = {'низкая': 1.3, 'средняя': 1.55, 'высокая': 1.9}
     return bmr * factors.get(user_info['activity'], 1.2)
 
-@router.callback_query(F.data == 'Моя суточная норма')
+@router.callback_query(F.data == '🕗Моя суточная норма')
 async def cmd_tdee(callback: CallbackQuery):
     uid = callback.from_user.id
     if uid not in users or not users[uid]['user_info']:

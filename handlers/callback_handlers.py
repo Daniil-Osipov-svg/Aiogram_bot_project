@@ -3,11 +3,12 @@ from aiogram.types import CallbackQuery
 from typing import cast
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup, default_state
+from aiogram.fsm.state import State, StatesGroup
 import logging
 
-from dicts import users, DishData, UserInfoData, UserData
-from keyboards.main_menu import start_menu, make_menu, return_select
+from dicts import users, DishData, UserInfoData
+from handlers.tdee_handlers import calculate_tdee
+from keyboards.main_menu import start_menu, make_menu, return_select, delete_menu
 from filters.filters import user_exists
 
 # FSM данных о новом блюде
@@ -33,10 +34,159 @@ class FSMFillUser(StatesGroup):
 class FSMDietState(StatesGroup):
     selecting = State()
 
+class FSMDeleteState(StatesGroup):
+    deleting = State()
+
 router = Router()
 
+@router.callback_query(F.data == "⚖Расчитать BMI")
+async def give_advice(callback: CallbackQuery):
+    uid = callback.from_user.id
+    data = users.get(uid)
+    if not data or not data['user_info']:
+        await callback.answer("Сначала заполните информацию о себе командой «Добавить инфо».")
+        return
 
-@router.callback_query(F.data == "Рацион на день")
+    ui = data['user_info']
+    # Расчёт BMI
+    try:
+        weight = float(ui['weight'])
+        height = float(ui['height'])
+        bmi = weight / ((height / 100) ** 2)
+    except (KeyError, ValueError, ZeroDivisionError):
+        await callback.answer("Неверные данные роста/веса. Пожалуйста, обновите информацию.")
+        return
+
+    # Расчёт TDEE
+    tdee = calculate_tdee(ui)
+
+    # Определяем статус по BMI
+    if bmi < 18.5:
+        status = "недостаточный вес"
+        recommendation = (
+            "Рекомендую увеличить калорийность рациона на 10–20% за счёт углеводов и белков, "
+            "добавить 2–3 приёма пищи и уделить внимание силовым тренировкам для набора массы."
+        )
+    elif bmi < 25:
+        status = "нормальный вес"
+        recommendation = (
+            "Ваш вес в норме. Поддерживайте текущий режим питания и тренировок. "
+            "При желании скорректировать форму — слегка уменьшите калорийность или замените часть углеводов на белок."
+        )
+    else:
+        status = "избыточный вес"
+        recommendation = (
+            "Рекомендую создать дефицит калорий 10–15% от TDEE, увеличить кардионагрузку "
+            "и контролировать размеры порций. Уделите внимание белковому питанию и клетчатке."
+        )
+
+    text = (
+        f"📊 *Ваши показатели:*\n\n"
+        f"- BMI: {bmi:.1f} ({status})\n"
+        f"- Суточная норма калорий (TDEE): {tdee:.0f} ккал\n\n"
+        f"*Совет:* {recommendation}"
+    )
+    if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
+        await callback.message.edit_text(text=text, reply_markup=return_select(), parse_mode="Markdown")
+
+
+
+# Удаление блюда
+
+@router.callback_query(F.data == "🥙Мои блюда")
+async def show_delete(callback: CallbackQuery, state: FSMContext):
+    uid = callback.from_user.id
+
+    await state.clear()
+
+    try: dishes = users[uid]['custom_dishes']
+
+    except KeyError:
+        await callback.answer("Пожалуйста, сначала добавьте блюда.")
+        return
+
+    if not dishes or len(dishes) == 0:
+        await callback.answer("У вас нет добавленных блюд.")
+        return
+
+    await state.clear()
+
+    await state.update_data(dishes=dishes, page=0, selected=[])
+
+    kb = delete_menu(dishes, page=0, selected=[])
+    if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
+        await callback.message.edit_text("Выберите блюдо из списка ниже, чтобы удалить его:", reply_markup=kb)
+
+    await state.set_state(FSMDeleteState.deleting)
+
+# Выбор блюда для удаления
+@router.callback_query(lambda c: c.data and c.data.startswith("delete_toggle:") , FSMDeleteState.deleting)
+async def toggle_delete(callback: CallbackQuery, state: FSMContext):
+    if callback.data is None:
+        await callback.answer("Неверные данные callback")
+        return
+
+    data = await state.get_data()
+    dishes, sel, page = data.get("dishes"), data.get("selected"), data.get("page")
+    _, idx_str, _ = callback.data.split(":")
+    idx = int(idx_str)
+    dish = dishes[idx] #type: ignore
+
+    if dish in sel: #type: ignore
+        sel.remove(dish) #type: ignore
+    else:
+        sel.append(dish) #type: ignore
+
+    await state.update_data(selected=sel)
+
+    kb = delete_menu(dishes, page, sel) #type: ignore
+    if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
+        await callback.message.edit_text("Выберите блюдо из списка ниже, чтобы удалить его:", reply_markup=kb)
+
+    await callback.answer()
+
+@router.callback_query(lambda c: c.data and c.data.startswith("page:"), FSMDeleteState.deleting)
+async def change_delete_page(callback: CallbackQuery, state: FSMContext):
+
+    if callback.data is None:
+        await callback.answer("Неверные данные callback")
+        return
+
+    data = await state.get_data()
+    dishes, sel = data['dishes'], data['selected']
+    page = int(callback.data.split(":")[1])
+    await state.update_data(page=page)
+    kb = delete_menu(dishes, page, sel)
+    if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
+        await callback.message.edit_text("Выберите блюдо из списка ниже, чтобы удалить его:", reply_markup=kb)
+    await callback.answer()
+
+@router.callback_query(F.data == "delete_confirm", FSMDeleteState.deleting)
+async def confirm_delete(callback: CallbackQuery, state: FSMContext):
+    uid = callback.from_user.id
+    data = await state.get_data()
+    selected = data['selected']
+
+    # Удаляем выбранные блюда из users
+    remaining = [d for d in users[uid]['custom_dishes'] if d not in selected]
+    users[uid]['custom_dishes'] = remaining
+
+    # Очищаем FSM
+    await state.clear()
+
+    # Ответ пользователю
+    names = [d['name'] for d in selected]
+    text = (
+        f"Удалено блюд: {len(selected)}\n"
+        f"Список удалённых: {', '.join(names)}"
+    )
+    if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
+        await callback.message.edit_text(text=text, reply_markup=return_select())
+    await callback.answer("Удаление завершено")
+
+# Рацион дня
+
+@router.callback_query(F.data == "⌛Рацион на день")
 async def show_today(callback: CallbackQuery, state: FSMContext):
     uid = callback.from_user.id
 
