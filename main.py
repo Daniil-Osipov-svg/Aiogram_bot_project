@@ -4,6 +4,7 @@ import logging
 from dicts import *
 from config import *
 from handlers import user_handlers, dish_handlers, callback_handlers, tdee_handlers
+from database.models import async_main
 
 # База данных
 #from database.engine import create_db, drop_db
@@ -23,21 +24,12 @@ storage = RedisStorage(redis=redis)
 
 logger = logging.getLogger(__name__)
 
-async def on_startup(bot):
-    # Создаем базу данных, если она не существует
-    #await create_db()
-    logger.info("База данных создана")
-
-async def on_shutdown(bot):
-    # Закрываем соединение с базой данных
-    logger.info("Бот завершает работу")
-
 async def main():
 
     # Привязываем функции к событиям
     #dp.register_startup(on_startup)
     #dp.register_shutdown(on_shutdown)
-
+    await async_main()
     # Настройка логирования
     logging.basicConfig(
         level=logging.INFO,
@@ -45,7 +37,7 @@ async def main():
                '[%(asctime)s] - %(name)s - %(message)s')
 
     # Получаем токен из конфигурационного файла
-    config: Config = load_config()
+    config = load_config()
 
     bot = Bot(token=config.bot.token)
     dp = Dispatcher(storage=storage)

@@ -10,6 +10,9 @@ from .callback_handlers import FSMFillUser
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup, default_state
 
+#База данных
+from database.requests import set_user
+
 router = Router()
 
 
@@ -18,6 +21,7 @@ router = Router()
 @router.message(Command(commands=['start']))
 async def start_command(message: Message):
     if message.from_user is not None:
+        await set_user(message.from_user.id, message.from_user.first_name, message.from_user.last_name)
         initialize_user(message)
         await message.answer('Привет!\nМеня зовут TunWheel!')
         await message.answer('Я твой личный помощник по подсчёту калорий.\n'

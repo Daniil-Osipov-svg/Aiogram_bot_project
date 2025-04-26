@@ -10,6 +10,7 @@ from dicts import users, DishData, UserInfoData
 from handlers.tdee_handlers import calculate_tdee
 from keyboards.main_menu import start_menu, make_menu, return_select, delete_menu
 from filters.filters import user_exists
+from database.requests import add_user_info
 
 # FSM данных о новом блюде
 class FSMFillDish(StatesGroup):
@@ -368,6 +369,14 @@ async def user_menu_callback(callback: CallbackQuery, state: FSMContext):
 
         # Если пользователь нажал Подтвердить пользователя, сохраняем
         users[user_id]['user_info'] = info_data
+
+        new_age = user_data.get('age', "Не указано")
+        new_weight = user_data.get('weight', "Не указано")
+        new_height = user_data.get('height', "Не указано")
+        new_gender = user_data.get('gender', "Не указано")
+        new_activity = user_data.get('activity', "Не указано")
+
+        await add_user_info(user_id, new_age, new_weight, new_height, new_gender, new_activity)
 
         await state.clear()
 
