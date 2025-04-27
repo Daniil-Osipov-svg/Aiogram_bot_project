@@ -3,37 +3,35 @@ from aiogram.types import CallbackQuery
 from dicts import users
 from filters.filters import user_exists
 from keyboards.main_menu import start_menu, return_select
+from database.requests import get_user_info, add_user_info
 
 router = Router()
 
 router.message.filter(user_exists)
 
-def calculate_tdee(user_info) -> float:
+def calculate_tdee(age, weight, height, gender, activity) -> float:
     # Формула Миффлина-Сан Жеора
-    weight = float(user_info['weight'])
-    height = float(user_info['height'])
-    age = float(user_info['age'])
-    gender = user_info['gender']
-    bmr = 10 * weight + 6.25 * height - 5 * age + (200 if gender == 'муж' else 50)
+    bmr = 10 * float(weight) + 6.25 * float(height) - 5 * float(age) + (200 if gender == 'муж' else 50)
 
     factors = {'низкая': 1.3, 'средняя': 1.55, 'высокая': 1.9}
-    return bmr * factors.get(user_info['activity'], 1.2)
+    return bmr * factors.get(activity, 1.2)
 
 @router.callback_query(F.data == '🕗Моя суточная норма')
 async def cmd_tdee(callback: CallbackQuery):
     uid = callback.from_user.id
-    if uid not in users or not users[uid]['user_info']:
+
+    user_info = await get_user_info(uid)
+
+    if not user_info:
         await callback.answer("Пожалуйста, сначала заполните информацию о себе.")
         return
 
-    tdee = calculate_tdee(users[uid]['user_info'])
-
     # Сохраняем TDEE в бд пользователей
 
-    users[uid]['user_info']["tdee"] = f"{tdee:.2f}"
+    #users[uid]['user_info']["tdee"] = f"{tdee:.2f}"
 
     text = (
-        f"Ваш суточный расход калорий (TDEE): {tdee:.2f} ккал.\n"
+        f"Ваш суточный расход калорий (TDEE): {user_info.tdee:.2f} ккал.\n"
         "Это количество калорий, которое вам нужно для поддержания текущего веса."
         "Чтобы сбросить вес, вам нужно создать дефицит калорий.\n"
         "И чтобы набрать вес, вам нужно наоборот создать избыток калорий. Желательно в пределах 200-400 ккал.\n"

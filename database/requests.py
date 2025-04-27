@@ -15,7 +15,7 @@ async def set_user(tg_id, first_name, last_name):
 
 
 
-async def add_user_info(user_id: int, age: int, weight: int, height: int, gender: str, activity: str):
+async def add_user_info(user_id: int, age: int, weight: int, height: int, gender: str, activity: str, tdee: float):
     async with async_session() as session:
         result = await session.execute(select(UserInfo).where(UserInfo.user_id == user_id))
         info = result.scalar_one_or_none()
@@ -26,6 +26,7 @@ async def add_user_info(user_id: int, age: int, weight: int, height: int, gender
             info.height = height
             info.gender = gender
             info.activity = activity
+            info.tdee = tdee
         else:
             # Создаём новую запись
             info = UserInfo(
@@ -34,8 +35,31 @@ async def add_user_info(user_id: int, age: int, weight: int, height: int, gender
                 weight=weight,
                 height=height,
                 gender=gender,
-                activity=activity
+                activity=activity,
+                tdee = tdee
             )
             session.add(info)
         await session.commit()
+        return info
+
+
+async def add_dish(user_id, dish_name, carbs, proteins, fats):
+    async with async_session() as session:
+        dish = Dish(
+            user_id = user_id,
+            dish_name = dish_name,
+            carbs = carbs,
+            proteins = proteins,
+            fats = fats
+        )
+        session.add(dish)
+        await session.commit()
+        return dish
+
+
+async def get_user_info(user_id):
+    async with async_session() as session:
+        result = await session.execute(select(UserInfo).where(User.tg_id == user_id))
+        info = result.scalar_one_or_none()
+
         return info

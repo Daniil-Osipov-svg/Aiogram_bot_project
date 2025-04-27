@@ -10,7 +10,8 @@ from dicts import users, DishData, UserInfoData
 from handlers.tdee_handlers import calculate_tdee
 from keyboards.main_menu import start_menu, make_menu, return_select, delete_menu
 from filters.filters import user_exists
-from database.requests import add_user_info
+from database.requests import add_user_info, add_dish, get_user_info
+from handlers.tdee_handlers import calculate_tdee
 
 # FSM данных о новом блюде
 class FSMFillDish(StatesGroup):
@@ -43,23 +44,22 @@ router = Router()
 @router.callback_query(F.data == "⚖Расчитать BMI")
 async def give_advice(callback: CallbackQuery):
     uid = callback.from_user.id
-    data = users.get(uid)
-    if not data or not data['user_info']:
-        await callback.answer("Сначала заполните информацию о себе командой «Добавить инфо».")
+
+    user_info = await get_user_info(uid)
+
+    if not user_info:
+        await callback.answer("Пожалуйста, сначала заполните информацию о себе.")
         return
 
-    ui = data['user_info']
+
     # Расчёт BMI
     try:
-        weight = float(ui['weight'])
-        height = float(ui['height'])
+        weight = user_info.weight
+        height = user_info.height
         bmi = weight / ((height / 100) ** 2)
     except (KeyError, ValueError, ZeroDivisionError):
         await callback.answer("Неверные данные роста/веса. Пожалуйста, обновите информацию.")
         return
-
-    # Расчёт TDEE
-    tdee = calculate_tdee(ui)
 
     # Определяем статус по BMI
     if bmi < 18.5:
@@ -84,7 +84,7 @@ async def give_advice(callback: CallbackQuery):
     text = (
         f"📊 *Ваши показатели:*\n\n"
         f"- BMI: {bmi:.1f} ({status})\n"
-        f"- Суточная норма калорий (TDEE): {tdee:.0f} ккал\n\n"
+        f"- Суточная норма калорий (TDEE): {user_info.tdee:.0f} ккал\n\n"
         f"*Совет:* {recommendation}"
     )
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
@@ -351,6 +351,13 @@ async def dish_menu_callback(callback: CallbackQuery, state: FSMContext):
         # Если пользователь нажал Подтвердить создание блюда, сохраняем
         users[user_id]['custom_dishes'].append(dish_data)
 
+        new_dish_name = data.get('name', "Не указано")
+        new_dish_carbs = data.get('carbs', "Не указано")
+        new_dish_protein = data.get('protein', "Не указано")
+        new_dish_fats = data.get('fats', "Не указано")
+
+        await add_dish(user_id, new_dish_name, new_dish_carbs, new_dish_protein, new_dish_fats)
+
         await state.clear()
 
         logging.info(users[callback.from_user.id])
@@ -370,13 +377,15 @@ async def user_menu_callback(callback: CallbackQuery, state: FSMContext):
         # Если пользователь нажал Подтвердить пользователя, сохраняем
         users[user_id]['user_info'] = info_data
 
-        new_age = user_data.get('age', "Не указано")
-        new_weight = user_data.get('weight', "Не указано")
-        new_height = user_data.get('height', "Не указано")
+        new_age = user_data.get('age', 18)
+        new_weight = user_data.get('weight', 80)
+        new_height = user_data.get('height', 170)
         new_gender = user_data.get('gender', "Не указано")
         new_activity = user_data.get('activity', "Не указано")
 
-        await add_user_info(user_id, new_age, new_weight, new_height, new_gender, new_activity)
+        tdee = calculate_tdee(new_age, new_weight, new_height, new_gender, new_activity)
+
+        await add_user_info(user_id, new_age, new_weight, new_height, new_gender, new_activity, tdee)
 
         await state.clear()
 
