@@ -1,18 +1,13 @@
 import asyncio
 import logging
 # Импортируем файлы проекта
-from dicts import *
 from config import *
 from handlers import user_handlers, dish_handlers, callback_handlers, tdee_handlers
 from database.models import async_main
 
-# База данных
-#from database.engine import create_db, drop_db
 
 # Импортируем библиотеки
 from aiogram import Bot, Dispatcher
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, Message
-from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED #noqa
 
 # Редис
 from aiogram.fsm.storage.redis import RedisStorage
@@ -27,8 +22,6 @@ logger = logging.getLogger(__name__)
 async def main():
 
     # Привязываем функции к событиям
-    #dp.register_startup(on_startup)
-    #dp.register_shutdown(on_shutdown)
     await async_main()
     # Настройка логирования
     logging.basicConfig(

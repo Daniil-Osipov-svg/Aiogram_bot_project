@@ -41,9 +41,9 @@ class Dish(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey('users.tg_id'), nullable=False)
     dish_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    carbs: Mapped[float] = mapped_column(Float(asdecimal=True), nullable=False)
-    proteins: Mapped[float] = mapped_column(Float(asdecimal=True), nullable=False)
-    fats: Mapped[float] = mapped_column(Float(asdecimal=True), nullable=False)
+    carbs: Mapped[float] = mapped_column(Float, nullable=False)
+    proteins: Mapped[float] = mapped_column(Float, nullable=False)
+    fats: Mapped[float] = mapped_column(Float, nullable=False)
 
 async def async_main():
     async with engine.begin() as conn:

@@ -6,12 +6,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 import logging
 
-from dicts import users, DishData, UserInfoData
 from handlers.tdee_handlers import calculate_tdee
 from keyboards.main_menu import start_menu, make_menu, return_select, delete_menu
-from filters.filters import user_exists
-from database.requests import add_user_info, add_dish, get_user_info
-from handlers.tdee_handlers import calculate_tdee
+from database.requests import add_user_info, add_dish, get_user_dishes, get_user_info, delete_dishes
 
 # FSM данных о новом блюде
 class FSMFillDish(StatesGroup):
@@ -100,21 +97,25 @@ async def show_delete(callback: CallbackQuery, state: FSMContext):
 
     await state.clear()
 
-    try: dishes = users[uid]['custom_dishes']
-
-    except KeyError:
-        await callback.answer("Пожалуйста, сначала добавьте блюда.")
-        return
+    dishes = await get_user_dishes(uid)
 
     if not dishes or len(dishes) == 0:
         await callback.answer("У вас нет добавленных блюд.")
         return
 
-    await state.clear()
+    dishes_data = [
+        {
+            "name": d.dish_name,
+            "carbs": d.carbs,
+            "protein": d.proteins,
+            "fats": d.fats
+        }
+        for d in dishes
+    ]
 
-    await state.update_data(dishes=dishes, page=0, selected=[])
+    await state.update_data(dishes=dishes_data, page=0, selected=[])
 
-    kb = delete_menu(dishes, page=0, selected=[])
+    kb = delete_menu(dishes=dishes_data, page=0, selected=[])
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
         await callback.message.edit_text("Выберите блюдо из списка ниже, чтобы удалить его:", reply_markup=kb)
 
@@ -168,9 +169,10 @@ async def confirm_delete(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     selected = data['selected']
 
-    # Удаляем выбранные блюда из users
-    remaining = [d for d in users[uid]['custom_dishes'] if d not in selected]
-    users[uid]['custom_dishes'] = remaining
+    # Список id блюд для удаления
+    dish_names = [d['name'] for d in selected]
+
+    await delete_dishes(uid, dish_names)
 
     # Очищаем FSM
     await state.clear()
@@ -179,7 +181,7 @@ async def confirm_delete(callback: CallbackQuery, state: FSMContext):
     names = [d['name'] for d in selected]
     text = (
         f"Удалено блюд: {len(selected)}\n"
-        f"Список удалённых: {', '.join(names)}"
+        f"Список удалённых: {', '.join(dish_names)}"
     )
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
         await callback.message.edit_text(text=text, reply_markup=return_select())
@@ -191,21 +193,33 @@ async def confirm_delete(callback: CallbackQuery, state: FSMContext):
 async def show_today(callback: CallbackQuery, state: FSMContext):
     uid = callback.from_user.id
 
-    try: dishes = users[uid]['custom_dishes']
+    user_info = await get_user_info(uid)
 
-    except KeyError:
-        await callback.answer("Пожалуйста, сначала добавьте блюда.")
+    if not user_info:
+        await callback.answer("Пожалуйста, сначала заполните информацию о себе.")
         return
+
+    await state.clear()
+
+    dishes = await get_user_dishes(uid)
 
     if not dishes or len(dishes) == 0:
         await callback.answer("У вас нет добавленных блюд.")
         return
 
-    await state.clear()
+    dishes_data = [
+        {
+            "name": d.dish_name,
+            "carbs": d.carbs,
+            "protein": d.proteins,
+            "fats": d.fats
+        }
+        for d in dishes
+    ]
 
-    await state.update_data(dishes=dishes, page=0, selected=[])
+    await state.update_data(dishes=dishes_data, page=0, selected=[])
 
-    kb = make_menu(dishes, page=0, selected=[])
+    kb = make_menu(dishes_data, page=0, selected=[])
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
         await callback.message.edit_text("Выберите блюдо из списка ниже:", reply_markup=kb)
 
@@ -257,6 +271,8 @@ async def confirm_selection(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     sel = data['selected']
 
+    user_info = await get_user_info(callback.from_user.id)
+
     total_c = sum(float(d['carbs']) for d in sel)
     total_p = sum(float(d['protein']) for d in sel)
     total_f = sum(float(d['fats']) for d in sel)
@@ -273,11 +289,8 @@ async def confirm_selection(callback: CallbackQuery, state: FSMContext):
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
         await callback.message.edit_text(text, parse_mode="Markdown")
 
-    try:
-        tdee = float(users[callback.from_user.id]['user_info']["tdee"])
-    except KeyError:
-        await callback.message.answer(text="Вы не указали свою суточную норму калорий.\nЧтобы её указать, нажмите кнопку Настроить профиль в главном меню.", reply_markup=return_select()) #type: ignore
-        return
+    tdee = float(user_info.tdee)
+
     if calories > tdee + 200:
         text1 = "Вы превысили свою суточную норму калорий!\n"
     elif calories < tdee - 200:
@@ -328,7 +341,7 @@ async def new_dish_callback(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
 
 
-@router.callback_query(F.data.in_(["user_no_callback", "👀Настроить профиль"]), user_exists)
+@router.callback_query(F.data.in_(["user_no_callback", "👀Настроить профиль"]))
 async def reuser_callback(callback: CallbackQuery, state: FSMContext):
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
         await callback.message.edit_text('Вы решили указать информацию о себе\nДля начала введите свой возраст.')
@@ -339,17 +352,15 @@ async def reuser_callback(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
 
 
-@router.callback_query(F.data == "dish_yes_callback", StateFilter(FSMFillDish.end), user_exists)
+@router.callback_query(F.data == "dish_yes_callback", StateFilter(FSMFillDish.end))
 async def dish_menu_callback(callback: CallbackQuery, state: FSMContext):
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
 
         user_id = callback.from_user.id
 
         data = await state.get_data()
-        dish_data = cast(DishData, data)
 
         # Если пользователь нажал Подтвердить создание блюда, сохраняем
-        users[user_id]['custom_dishes'].append(dish_data)
 
         new_dish_name = data.get('name', "Не указано")
         new_dish_carbs = data.get('carbs', "Не указано")
@@ -360,22 +371,17 @@ async def dish_menu_callback(callback: CallbackQuery, state: FSMContext):
 
         await state.clear()
 
-        logging.info(users[callback.from_user.id])
         await callback.message.edit_text('Это меню. Здесь вы можете выбрать, что хотите сделать.\nВыберите один из пунктов ниже:', reply_markup=start_menu())
 
     await callback.answer("Блюдо успешно добавлено!")
 
-@router.callback_query(F.data == "user_yes_callback", StateFilter(FSMFillUser.end), user_exists)
+@router.callback_query(F.data == "user_yes_callback", StateFilter(FSMFillUser.end))
 async def user_menu_callback(callback: CallbackQuery, state: FSMContext):
     if (callback.message is not None) and (hasattr(callback.message, 'edit_text')):
 
         user_id = callback.from_user.id
 
         user_data = await state.get_data()
-        info_data = cast(UserInfoData, user_data)
-
-        # Если пользователь нажал Подтвердить пользователя, сохраняем
-        users[user_id]['user_info'] = info_data
 
         new_age = user_data.get('age', 18)
         new_weight = user_data.get('weight', 80)
@@ -389,7 +395,6 @@ async def user_menu_callback(callback: CallbackQuery, state: FSMContext):
 
         await state.clear()
 
-        logging.info(users[callback.from_user.id])
         await callback.message.edit_text('Это меню. Здесь вы можете выбрать, что хотите сделать.\nВыберите один из пунктов ниже:', reply_markup=start_menu())
 
     await callback.answer("Данные пользователя успешно обновлены!")

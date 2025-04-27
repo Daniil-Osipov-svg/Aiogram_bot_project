@@ -1,13 +1,9 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from dicts import users
-from filters.filters import user_exists
 from keyboards.main_menu import start_menu, return_select
-from database.requests import get_user_info, add_user_info
+from database.requests import get_user_info
 
 router = Router()
-
-router.message.filter(user_exists)
 
 def calculate_tdee(age, weight, height, gender, activity) -> float:
     # Формула Миффлина-Сан Жеора

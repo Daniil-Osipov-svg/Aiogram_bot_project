@@ -2,17 +2,12 @@ from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.types import Message
 from keyboards.main_menu import yes_or_no_dish
-from filters.filters import user_exists, selects_dish
 
 from .callback_handlers import FSMFillDish
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup, default_state
 
 # Импортируем роутер
 router = Router()
-
-# Проверка на существование пользователя в сессии
-router.message.filter(user_exists)
 
 
 @router.message(F.text, StateFilter(FSMFillDish.dish_carbs))

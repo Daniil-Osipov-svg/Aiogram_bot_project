@@ -63,3 +63,17 @@ async def get_user_info(user_id):
         info = result.scalar_one_or_none()
 
         return info
+
+
+async def get_user_dishes(user_id):
+    async with async_session() as session:
+        result = await session.execute(select(Dish).where(Dish.user_id == user_id))
+        return result.scalars().all()
+
+
+async def delete_dishes(user_id, dish_names):
+    async with async_session() as session:
+        await session.execute(
+            delete(Dish).where(Dish.user_id == user_id, Dish.dish_name.in_(dish_names))
+        )
+        await session.commit()

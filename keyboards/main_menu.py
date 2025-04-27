@@ -1,6 +1,5 @@
 from typing import List
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from dicts import DishData
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from keyboards.create_keyboard import create_keyboard
@@ -73,7 +72,7 @@ def return_select() -> InlineKeyboardMarkup:
 
 ITEMS_PER_PAGE = 5  # Количество элементов на странице
 
-def make_menu(dishes: List[DishData], page: int, selected: List[DishData]) -> InlineKeyboardMarkup:
+def make_menu(dishes: List, page: int, selected: List) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     start = page * ITEMS_PER_PAGE
     end = start + ITEMS_PER_PAGE
@@ -105,7 +104,7 @@ def make_menu(dishes: List[DishData], page: int, selected: List[DishData]) -> In
     return kb.as_markup()
 
 
-def delete_menu(dishes: List[DishData], page: int, selected: List[DishData]) -> InlineKeyboardMarkup:
+def delete_menu(dishes: List, page: int, selected: List) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     start = page * ITEMS_PER_PAGE
     end = start + ITEMS_PER_PAGE

@@ -1,14 +1,11 @@
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.types import Message, CallbackQuery
-from dicts import users, initialize_user
 from keyboards.main_menu import start_menu, yes_or_no_user, gender_select, activity_select
-from filters.filters import user_exists, user_not_exists, selects_info
 import logging
 
 from .callback_handlers import FSMFillUser
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup, default_state
 
 #База данных
 from database.requests import set_user
@@ -22,7 +19,6 @@ router = Router()
 async def start_command(message: Message):
     if message.from_user is not None:
         await set_user(message.from_user.id, message.from_user.first_name, message.from_user.last_name)
-        initialize_user(message)
         await message.answer('Привет!\nМеня зовут TunWheel!')
         await message.answer('Я твой личный помощник по подсчёту калорий.\n'
                             'Я помогу тебе составить рацион питания и достичь твоих целей!')
@@ -34,7 +30,7 @@ async def start_command(message: Message):
         await message.answer('Несуществующий пользователь!')
         return
 
-@router.message(Command(commands=['menu']), user_exists)
+@router.message(Command(commands=['menu']))
 async def menu_command(message: Message):
     await message.answer(text = 'Это меню. Здесь вы можете выбрать, что хотите сделать.\nВыберите один из пунктов ниже:', reply_markup=start_menu())
 
@@ -135,8 +131,3 @@ async def desc_user_activity(callback: CallbackQuery, state: FSMContext):
 
 
         await state.set_state(FSMFillUser.end)
-
-@router.message(user_not_exists)
-async def say_no_user(message: Message):
-    await message.answer('Вы отсутствуете в нынешнем сеансе.\n'
-                        'Напишите /start, чтобы продолжить!')
