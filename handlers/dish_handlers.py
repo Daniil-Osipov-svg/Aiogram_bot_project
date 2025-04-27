@@ -14,6 +14,14 @@ router = Router()
 async def desc_new_dish_carbs(message: Message, state: FSMContext):
     if message.text is not None and message.text.isdigit():
 
+        if float(message.text) > 10000:
+            await message.answer('Слишком много грамм в блюде!')
+            return
+
+        if float(message.text) < 0:
+            await message.answer('Значение не может быть отрицательным!')
+            return
+
         await state.update_data(carbs = message.text)
 
         await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
@@ -28,6 +36,14 @@ async def desc_new_dish_carbs(message: Message, state: FSMContext):
 @router.message(F.text, StateFilter(FSMFillDish.dish_protein))
 async def desc_new_dish_protein(message: Message, state: FSMContext):
     if message.text is not None and message.text.isdigit():
+
+        if float(message.text) > 10000:
+            await message.answer('Слишком много грамм в блюде!')
+            return
+
+        if float(message.text) < 0:
+            await message.answer('Значение не может быть отрицательным!')
+            return
 
         await state.update_data(protein = message.text)
 
@@ -44,6 +60,14 @@ async def desc_new_dish_protein(message: Message, state: FSMContext):
 async def desc_new_dish_fats(message: Message, state: FSMContext):
     if message.text is not None and message.text.isdigit():
 
+        if float(message.text) > 10000:
+            await message.answer('Слишком много грамм в блюде!')
+            return
+
+        if float(message.text) < 0:
+            await message.answer('Значение не может быть отрицательным!')
+            return
+
         await state.update_data(fats = message.text)
 
         await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
@@ -58,6 +82,10 @@ async def desc_new_dish_fats(message: Message, state: FSMContext):
 @router.message(F.text, StateFilter(FSMFillDish.dish_name))
 async def desc_new_dish_name(message: Message, state: FSMContext):
     if message.text is not None:
+
+        if len(message.text) > 40:
+            await message.answer('Название блюда не должно превышать 40 символов')
+            return
 
         await state.update_data(name = message.text)
         data = await state.get_data()

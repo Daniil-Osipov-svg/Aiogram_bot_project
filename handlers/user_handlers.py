@@ -45,6 +45,11 @@ async def help_command(message: Message):
 async def desc_user_age(message: Message, state: FSMContext):
     if message.text is not None and message.text.isdigit():
 
+        #Проверка данных
+        if float(message.text) > 120 or float(message.text) < 4:
+            await message.answer('Введите ваш реальный возраст')
+            return
+
         await state.update_data(age = message.text)
 
         await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
@@ -60,6 +65,10 @@ async def desc_user_age(message: Message, state: FSMContext):
 async def desc_user_weight(message: Message, state: FSMContext):
     if message.text is not None and message.text.isdigit():
 
+        if float(message.text) > 645 or float(message.text) < 5.5:
+            await message.answer('Введите ваш реальный вес')
+            return
+
         await state.update_data(weight = message.text)
 
         await message.bot.delete_message(chat_id = message.from_user.id, message_id = message.message_id - 1) #type: ignore
@@ -74,6 +83,10 @@ async def desc_user_weight(message: Message, state: FSMContext):
 @router.message(F.text, StateFilter(FSMFillUser.user_height))
 async def desc_user_height(message: Message, state: FSMContext):
     if message.text is not None and message.text.isdigit():
+
+        if float(message.text) > 251 or float(message.text) < 50:
+            await message.answer('Введите ваш реальный рост')
+            return
 
         await state.update_data(height = message.text)
 
