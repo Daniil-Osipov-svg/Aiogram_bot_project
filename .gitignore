@@ -6,3 +6,5 @@ __pycache__/
 .mypy_cache/
 handlers/__pycache__/
 dump.rdb
+db.sqlite3
+test.py
